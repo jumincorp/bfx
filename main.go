@@ -11,22 +11,29 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/spf13/viper"
 )
 
-// MinerAddress is the address:port of bfgminer
-const MinerAddress = ":40960"
+const programName = "bfx"
 
-// ExposePort is the port we offer information on for Prometheus to pick up
-const ExposePort = ":40010"
+const cfgMinerAddress = "Miner.Address"
+const defMinerAddress = ":4028"
 
-// QueryDelay is the number of seconds we wait until interrogating the miner again
-const QueryDelay = 15
+const cfgPrometheusAddress = "Prometheus.Address"
+const defPrometheusAddress = ":40010"
 
-// Miner is the current miner name
-const Miner = "EQBminer"
+const cfgQueryDelay = "QueryDelay"
+const defQueryDelay time.Duration = 15
 
-// Symbol is the crypto-currency we have currently mining
-const Symbol = "EQB"
+const cfgMinerName = "Miner.Program"
+const defMinerName = "EQBminer"
+
+const cfgMinerID = "Miner.ID"
+const defMinerID = "default"
+
+const cfgMinerSymbol = "Miner.Symbol"
+const defMinerSymbol = "EQB"
 
 type rpcCommand struct {
 	Command   string `json:"command"`
@@ -97,13 +104,28 @@ func init() {
 	// Metrics have to be registered to be exposed:
 	//prometheus.MustRegister(minerTotalHashRate)
 	prometheus.MustRegister(minerGpuHashRate)
+
+	viper.SetDefault(cfgMinerAddress, defMinerAddress)
+	viper.SetDefault(cfgPrometheusAddress, defPrometheusAddress)
+	viper.SetDefault(cfgMinerAddress, defMinerAddress)
+	viper.SetDefault(cfgMinerName, defMinerAddress)
+	viper.SetDefault(cfgMinerSymbol, defMinerSymbol)
+	viper.SetDefault(cfgQueryDelay, defQueryDelay)
+
+	viper.SetConfigName(programName)
+	viper.AddConfigPath(fmt.Sprintf("/etc/%v", programName))
+
+	err := viper.ReadInConfig()
+	if err != nil { // Handle errors reading the config file
+		fmt.Printf("error reading config file: %s", err)
+	}
 }
 
 func main() {
 
 	go func() {
 		for {
-			conn, err := net.Dial("tcp", MinerAddress)
+			conn, err := net.Dial("tcp", viper.Get(cfgMinerAddress).(string))
 
 			if err == nil {
 
@@ -117,33 +139,33 @@ func main() {
 					err = json.NewDecoder(bufio.NewReader(conn)).Decode(&resp)
 
 					if err != nil {
-						fmt.Printf("Error decoding response: %v\n", err)
+						log.Printf("Error decoding response: %v\n", err)
 						// But we're still trying to do it as well as we can.
 					}
-					fmt.Printf("Response:\n%v\n", resp)
+					log.Printf("Response:\n%v\n", resp)
 
 					for i, device := range resp.DEVS {
-						fmt.Printf("%v Device %v Hashrate %v\n", i, device.ID, device.MHS20S)
+						log.Printf("%v Device %v Hashrate %v\n", i, device.ID, device.MHS20S)
 
 						minerGpuHashRate.With(prometheus.Labels{
-							"miner":  Miner,
+							"miner":  viper.Get(cfgMinerName).(string),
 							"gpu":    fmt.Sprintf("GPU%d", device.ID),
-							"symbol": Symbol,
+							"symbol": viper.Get(cfgMinerSymbol).(string),
 						}).Set(device.MHS20S)
 					}
 				} else {
-					fmt.Printf("Error marshaling command: %v\n", err)
+					log.Printf("Error marshaling command: %v\n", err)
 				}
 			} else {
-				fmt.Printf("Error connecting to miner: %v\n", err)
+				log.Printf("Error connecting to miner: %v\n", err)
 			}
 
-			time.Sleep(time.Second * QueryDelay)
+			time.Sleep(time.Second * viper.Get(cfgQueryDelay).(time.Duration))
 		}
 	}()
 
 	// The Handler function provides a default handler to expose metrics
 	// via an HTTP server. "/metrics" is the usual endpoint for that.
 	http.Handle("/metrics", promhttp.Handler())
-	log.Fatal(http.ListenAndServe(ExposePort, nil))
+	log.Fatal(http.ListenAndServe(viper.Get(cfgPrometheusAddress).(string), nil))
 }
