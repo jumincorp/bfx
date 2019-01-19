@@ -12,28 +12,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/spf13/viper"
+	"../config"
 )
 
 const programName = "bfx"
-
-const cfgMinerAddress = "Miner.Address"
-const defMinerAddress = ":4028"
-
-const cfgPrometheusAddress = "Prometheus.Address"
-const defPrometheusAddress = ":40010"
-
-const cfgQueryDelay = "QueryDelay"
-const defQueryDelay time.Duration = 15
-
-const cfgMinerName = "Miner.Program"
-const defMinerName = "EQBminer"
-
-const cfgMinerID = "Miner.ID"
-const defMinerID = "default"
-
-const cfgMinerSymbol = "Miner.Symbol"
-const defMinerSymbol = "EQB"
 
 type rpcCommand struct {
 	Command   string `json:"command"`
@@ -98,34 +80,28 @@ var (
 		},
 		[]string{"miner", "gpu", "symbol"},
 	)
+
+	cfg *config.Config
 )
 
 func init() {
+
+	log.Printf("main init")
+
+	cfg = config.NewConfig(programName)
 	// Metrics have to be registered to be exposed:
 	//prometheus.MustRegister(minerTotalHashRate)
 	prometheus.MustRegister(minerGpuHashRate)
 
-	viper.SetDefault(cfgMinerAddress, defMinerAddress)
-	viper.SetDefault(cfgPrometheusAddress, defPrometheusAddress)
-	viper.SetDefault(cfgMinerAddress, defMinerAddress)
-	viper.SetDefault(cfgMinerName, defMinerAddress)
-	viper.SetDefault(cfgMinerSymbol, defMinerSymbol)
-	viper.SetDefault(cfgQueryDelay, defQueryDelay)
-
-	viper.SetConfigName(programName)
-	viper.AddConfigPath(fmt.Sprintf("/etc/%v", programName))
-
-	err := viper.ReadInConfig()
-	if err != nil { // Handle errors reading the config file
-		fmt.Printf("error reading config file: %s", err)
-	}
 }
 
 func main() {
 
+	log.Printf("Config Name: %v\n", cfg.Name())
+
 	go func() {
 		for {
-			conn, err := net.Dial("tcp", viper.Get(cfgMinerAddress).(string))
+			conn, err := net.Dial("tcp", cfg.Miner.Address())
 
 			if err == nil {
 
@@ -148,9 +124,9 @@ func main() {
 						log.Printf("%v Device %v Hashrate %v\n", i, device.ID, device.MHS20S)
 
 						minerGpuHashRate.With(prometheus.Labels{
-							"miner":  viper.Get(cfgMinerName).(string),
+							"miner":  cfg.Miner.Program(),
 							"gpu":    fmt.Sprintf("GPU%d", device.ID),
-							"symbol": viper.Get(cfgMinerSymbol).(string),
+							"symbol": cfg.Miner.Symbol(),
 						}).Set(device.MHS20S)
 					}
 				} else {
@@ -160,12 +136,12 @@ func main() {
 				log.Printf("Error connecting to miner: %v\n", err)
 			}
 
-			time.Sleep(time.Second * viper.Get(cfgQueryDelay).(time.Duration))
+			time.Sleep(time.Second * cfg.QueryDelay())
 		}
 	}()
 
 	// The Handler function provides a default handler to expose metrics
 	// via an HTTP server. "/metrics" is the usual endpoint for that.
 	http.Handle("/metrics", promhttp.Handler())
-	log.Fatal(http.ListenAndServe(viper.Get(cfgPrometheusAddress).(string), nil))
+	log.Fatal(http.ListenAndServe(cfg.Prometheus.Address(), nil))
 }
