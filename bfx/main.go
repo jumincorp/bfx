@@ -85,10 +85,8 @@ var (
 )
 
 func init() {
-
-	log.Printf("main init")
-
 	cfg = config.NewConfig(programName)
+
 	// Metrics have to be registered to be exposed:
 	//prometheus.MustRegister(minerTotalHashRate)
 	prometheus.MustRegister(minerGpuHashRate)
@@ -96,8 +94,6 @@ func init() {
 }
 
 func main() {
-
-	log.Printf("Config Name: %v\n", cfg.Name())
 
 	go func() {
 		for {
