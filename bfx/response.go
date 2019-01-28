@@ -3,19 +3,26 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
 	"strings"
 )
 
 type responseIface interface {
 	append(map[string]interface{})
-	export()
+	getMetrics(prefix string, namespace string, id string) []metrics
 	setCommandName(string)
 }
 
+type metrics struct {
+	headers map[string]string
+	values  map[string]float64
+}
+
 type response struct {
-	command string
-	data    []map[string]interface{}
+	command     string
+	data        []map[string]interface{}
+	headerNames map[string]string
 }
 
 func (r *response) setCommandName(command string) {
@@ -33,8 +40,8 @@ func sanitizeName(name string) string {
 	return name
 }
 
-func (r *response) metricName(data string) string {
-	return strings.Join([]string{"bfx", r.command, sanitizeName(data)}, "_")
+func (r *response) metricName(prefix string, data string) string {
+	return strings.Join([]string{prefix, r.command, sanitizeName(data)}, "_")
 }
 
 func newResponse(command string, responseBytes []byte) responseIface {
@@ -79,23 +86,46 @@ func newResponse(command string, responseBytes []byte) responseIface {
 	return r
 }
 
-func (r *response) export() {
+func (r *response) getMetrics(prefix string, namespace string, id string) []metrics {
+
+	var metricsArray = make([]metrics, len(r.data))
+
 	for _, element := range r.data {
+		var metrics metrics
+		metrics.headers = make(map[string]string)
+		metrics.headers["namespace"] = namespace
+		metrics.headers["miner"] = id
+
+		metrics.values = make(map[string]float64)
+
 		log.Printf("---")
 		for name, val := range element {
-			metricName := r.metricName(name)
-			switch casted := val.(type) {
-			case int64:
-				log.Printf("i! %s %d\n", name, casted)
-			case float64:
-				log.Printf("f  %s >> %s %f\n", name, metricName, casted)
-			case string:
-				log.Printf("s! %s %s\n", name, casted)
-			default:
-				log.Printf("?! %s %s\n", name, casted)
+
+			if format, present := r.headerNames[name]; present {
+				//log.Printf("header %s : %s\n", name, fmt.Sprintf(format, val))
+				metrics.headers[name] = fmt.Sprintf(format, val)
+			} else {
+				metricName := r.metricName(prefix, name)
+				switch casted := val.(type) {
+				case int64:
+					log.Printf("i! %s %d\n", name, casted)
+				case float64:
+					//log.Printf("f  %s >> %s %f\n", name, metricName, casted)
+					metrics.values[metricName] = casted
+				case string:
+					log.Printf("s! %s %s\n", name, casted)
+				default:
+					log.Printf("?! %s %s\n", name, casted)
+				}
 			}
 		}
+		metricsArray = append(metricsArray, metrics)
 	}
+	return metricsArray
+}
+
+func (r *response) makeResponse() {
+	r.headerNames = make(map[string]string)
 }
 
 type devsResponse struct {
@@ -104,6 +134,11 @@ type devsResponse struct {
 
 func newDevsResponse() *devsResponse {
 	r := new(devsResponse)
+	r.makeResponse()
+
+	r.headerNames["Name"] = "%s"
+	r.headerNames["ID"] = "%.0f"
+
 	//r.response.data = make([]map[string]interface{}, 10)
 
 	return r

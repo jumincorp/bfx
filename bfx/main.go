@@ -35,7 +35,6 @@ func init() {
 
 	// Metrics have to be registered to be exposed:
 	prometheus.MustRegister(minerGpuHashRate)
-
 }
 
 type rpcCommand struct {
@@ -64,9 +63,17 @@ func gatherCommand(command string) {
 		log.Printf(" %v\n", command)
 		log.Printf("-------------------------------------\n")
 		r := newResponse(command, resp)
-		//log.Printf("r %v\n", r)
 
-		r.export()
+		for _, metrics := range r.getMetrics(programName, programName, cfg.Miner.ID()) {
+
+			for k, v := range metrics.headers {
+				log.Printf("header %s %s\n", k, v)
+			}
+
+			for k, v := range metrics.values {
+				log.Printf("value %s %f\n", k, v)
+			}
+		}
 
 		//for _, data := range r.data {
 		//	log.Printf("data MHS rolling %v", data["MHS rolling"])
