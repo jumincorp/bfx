@@ -8,22 +8,22 @@ const (
 )
 
 // Miner represents the Miner section of the configuration
-type Miner struct {
+type MinerConfig struct {
 }
 
-func newMiner() *Miner {
-	miner := new(Miner)
+func newMinerConfig() *MinerConfig {
+	minerConfig := new(MinerConfig)
 
 	viper.SetDefault(cfgMinerAddress, ":4028")
 	viper.SetDefault(cfgMinerID, "default")
 
-	return miner
+	return minerConfig
 }
 
-func (miner *Miner) Address() string {
+func (*MinerConfig) Address() string {
 	return viper.Get(cfgMinerAddress).(string)
 }
 
-func (miner *Miner) ID() string {
+func (*MinerConfig) ID() string {
 	return viper.Get(cfgMinerID).(string)
 }

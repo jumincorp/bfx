@@ -7,16 +7,16 @@ const (
 )
 
 // Prometheus represents the Prometheus section of the configuration
-type Prometheus struct {
+type PrometheusConfig struct {
 }
 
-func newPrometheus() *Prometheus {
-	prometheus := new(Prometheus)
+func newPrometheusConfig() *PrometheusConfig {
+	prometheusConfig := new(PrometheusConfig)
 	viper.SetDefault(cfgPrometheusAddress, ":40010")
 
-	return prometheus
+	return prometheusConfig
 }
 
-func (prometheus *Prometheus) Address() string {
+func (*PrometheusConfig) Address() string {
 	return viper.Get(cfgPrometheusAddress).(string)
 }

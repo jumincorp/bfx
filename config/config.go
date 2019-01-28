@@ -13,8 +13,8 @@ const (
 
 // Config represents the configuration file. You should use NewConfig to create one.
 type Config struct {
-	Miner      *Miner
-	Prometheus *Prometheus
+	Miner      *MinerConfig
+	Prometheus *PrometheusConfig
 	queryDelay time.Duration
 }
 
@@ -25,8 +25,8 @@ func NewConfig(name string) *Config {
 	viper.SetConfigName(name)
 	viper.AddConfigPath(fmt.Sprintf("/etc/%v", name))
 
-	cfg.Prometheus = newPrometheus()
-	cfg.Miner = newMiner()
+	cfg.Prometheus = newPrometheusConfig()
+	cfg.Miner = newMinerConfig()
 
 	viper.SetDefault(cfgQueryDelay, 15)
 
