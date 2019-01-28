@@ -8,22 +8,12 @@ import (
 	"net"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
-
 	"../config"
 )
 
 const programName = "bfx"
 
 var (
-	minerGpuHashRate = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "miner_gpu_hashrate",
-			Help: "Current hash rate of a GPU.",
-		},
-		[]string{"namespace", "miner", "gpu", "symbol"},
-	)
-
 	cfg    *config.Config
 	export *prometheusExporter
 )
@@ -32,8 +22,6 @@ func init() {
 	cfg = config.NewConfig(programName)
 	export = newPrometheusExporter(cfg.Prometheus.Address())
 
-	// Metrics have to be registered to be exposed:
-	prometheus.MustRegister(minerGpuHashRate)
 }
 
 type rpcCommand struct {

@@ -10,6 +10,14 @@ import (
 
 var (
 	collectors = make(map[string](*prometheus.GaugeVec))
+
+	minerGpuHashRate = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "miner_gpu_hashrate",
+			Help: "Current hash rate of a GPU.",
+		},
+		[]string{"namespace", "miner", "gpu", "symbol"},
+	)
 )
 
 type prometheusExporter struct {
@@ -33,6 +41,10 @@ func init() {
 	for _, c := range collectors {
 		prometheus.MustRegister(c)
 	}
+
+	// Metrics have to be registered to be exposed:
+	prometheus.MustRegister(minerGpuHashRate)
+
 }
 
 func newPrometheusExporter(address string) *prometheusExporter {
