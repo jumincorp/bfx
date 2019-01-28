@@ -11,7 +11,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"../config"
-	"../export"
 )
 
 const programName = "bfx"
@@ -25,13 +24,13 @@ var (
 		[]string{"namespace", "miner", "gpu", "symbol"},
 	)
 
-	cfg      *config.Config
-	exporter export.Exporter
+	cfg    *config.Config
+	export *prometheusExporter
 )
 
 func init() {
 	cfg = config.NewConfig(programName)
-	exporter = export.NewPrometheus(cfg.Prometheus.Address())
+	export = newPrometheusExporter(cfg.Prometheus.Address())
 
 	// Metrics have to be registered to be exposed:
 	prometheus.MustRegister(minerGpuHashRate)
@@ -65,14 +64,7 @@ func gatherCommand(command string) {
 		r := newResponse(command, resp)
 
 		for _, metrics := range r.getMetrics(programName, programName, cfg.Miner.ID()) {
-
-			for k, v := range metrics.headers {
-				log.Printf("header %s %s\n", k, v)
-			}
-
-			for k, v := range metrics.values {
-				log.Printf("value %s %f\n", k, v)
-			}
+			export.export(metrics)
 		}
 
 		//for _, data := range r.data {
@@ -106,5 +98,5 @@ func main() {
 			time.Sleep(time.Second * cfg.QueryDelay())
 		}
 	}()
-	exporter.Setup()
+	export.setup()
 }

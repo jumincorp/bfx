@@ -1,9 +1,8 @@
-package export
+package main
 
 import (
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -13,9 +12,9 @@ var (
 	collectors = make(map[string](*prometheus.GaugeVec))
 )
 
-type Prometheus struct {
+type prometheusExporter struct {
 	address string
-	Exporter
+	exporter
 }
 
 func init() {
@@ -36,28 +35,37 @@ func init() {
 	}
 }
 
-func NewPrometheus(address string) *Prometheus {
-	p := new(Prometheus)
+func newPrometheusExporter(address string) *prometheusExporter {
+	p := new(prometheusExporter)
 	p.address = address
 	return p
 }
 
-func (p *Prometheus) Setup() {
+func (p *prometheusExporter) setup() {
 	// The Handler function provides a default handler to expose metrics
 	// via an HTTP server. "/metrics" is the usual endpoint for that.
 	http.Handle("/metrics", promhttp.Handler())
 	log.Fatal(http.ListenAndServe(p.address, nil))
 }
 
-func (p *Prometheus) Export(ctype string, gpu string, name string, value string) error {
-	_, err := strconv.ParseFloat(value, 64)
-	if err == nil {
-		//switch ctype {
-		//case clock, power:
-		//collectors[ctype].With(prometheus.Labels{"gpu": gpu, "name": name}).Set(fValue)
-		//default:
-		//collectors[ctype].With(prometheus.Labels{"gpu": gpu}).Set(fValue)
-		//}
+func (p *prometheusExporter) export(m metrics) error {
+	var err error
+
+	for k, v := range m.headers {
+		log.Printf("header %s %s\n", k, v)
 	}
+
+	for k, v := range m.values {
+		log.Printf("value %s %f\n", k, v)
+	}
+	//_, err := strconv.ParseFloat(value, 64)
+	//if err == nil {
+	////switch ctype {
+	////case clock, power:
+	////collectors[ctype].With(prometheus.Labels{"gpu": gpu, "name": name}).Set(fValue)
+	////default:
+	////collectors[ctype].With(prometheus.Labels{"gpu": gpu}).Set(fValue)
+	////}
+	//}
 	return err
 }
