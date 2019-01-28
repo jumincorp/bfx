@@ -14,11 +14,6 @@ type responseIface interface {
 	setCommandName(string)
 }
 
-type metrics struct {
-	headers map[string]string
-	values  map[string]float64
-}
-
 type response struct {
 	command     string
 	data        []map[string]interface{}

@@ -19,7 +19,11 @@ var (
 func init() {
 	cfg = newConfig(programName)
 	export = newPrometheusExporter(cfg.prometheus.address())
+}
 
+type metrics struct {
+	headers map[string]string
+	values  map[string]float64
 }
 
 type rpcCommand struct {
@@ -49,24 +53,8 @@ func gatherCommand(command string) {
 		log.Printf("-------------------------------------\n")
 		r := newResponse(command, resp)
 
-		for _, metrics := range r.getMetrics(programName, programName, cfg.miner.id()) {
-			export.export(metrics)
-		}
-
-		//for _, data := range r.data {
-		//	log.Printf("data MHS rolling %v", data["MHS rolling"])
-		//}
-
-		//for i, device := range resp.DEVS {
-		//log.Printf("%v Device %v %v Hashrate %v\n", i, device.Name, device.ID, device.MHS20S)
-
-		//minerGpuHashRate.With(prometheus.Labels{
-		//"namespace": programName,
-		//"miner":     cfg.Miner.Program(),
-		//"gpu":       fmt.Sprintf("GPU%d", device.ID),
-		//"symbol":    cfg.Miner.Symbol(),
-		//}).Set(device.MHS20S)
-		//}
+		metrics := r.getMetrics(programName, programName, cfg.miner.id())
+		export.export(metrics)
 
 	} else {
 		log.Printf("Error sending command to miner: %v\n", err)

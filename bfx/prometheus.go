@@ -1,23 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
-
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"sort"
+	"strings"
+	"sync"
 )
 
 var (
-	collectors = make(map[string](*prometheus.GaugeVec))
-
-	minerGpuHashRate = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "miner_gpu_hashrate",
-			Help: "Current hash rate of a GPU.",
-		},
-		[]string{"namespace", "miner", "gpu", "symbol"},
-	)
+	mutex            = &sync.Mutex{}
+	formattedMetrics = make([]string, 0)
 )
 
 type prometheusExporter struct {
@@ -26,24 +20,12 @@ type prometheusExporter struct {
 }
 
 func init() {
-	//collectors[clock] =
-	//prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "amdgpu_clock", Help: "GPU Clock Rate in MHz"}, []string{"gpu", "name"})
+	//for _, c := range collectors {
+	//prometheus.MustRegister(c)
+	//}
 
-	//collectors[power] =
-	//prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "amdgpu_power", Help: "GPU Power Consumption in Watts"}, []string{"gpu", "name"})
-
-	//collectors[temp] =
-	//prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "amdgpu_temp", Help: "GPU Temperature in Celcius"}, []string{"gpu"})
-
-	//collectors[load] =
-	//prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "amdgpu_load", Help: "GPU Load Percentage"}, []string{"gpu"})
-
-	for _, c := range collectors {
-		prometheus.MustRegister(c)
-	}
-
-	// Metrics have to be registered to be exposed:
-	prometheus.MustRegister(minerGpuHashRate)
+	// // Metrics have to be registered to be exposed:
+	//prometheus.MustRegister(minerGpuHashRate)
 
 }
 
@@ -53,31 +35,77 @@ func newPrometheusExporter(address string) *prometheusExporter {
 	return p
 }
 
+func handleWithCare() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		mutex.Lock()
+		defer mutex.Unlock()
+
+		for _, metric := range formattedMetrics {
+			w.Write([]byte(metric))
+			w.Write([]byte("\n"))
+		}
+	}
+}
+
 func (p *prometheusExporter) setup() {
 	// The Handler function provides a default handler to expose metrics
 	// via an HTTP server. "/metrics" is the usual endpoint for that.
-	http.Handle("/metrics", promhttp.Handler())
+	//http.Handle("/metrics", promhttp.Handler())
+	http.Handle("/metrics", handleWithCare())
 	log.Fatal(http.ListenAndServe(p.address, nil))
 }
 
-func (p *prometheusExporter) export(m metrics) error {
+func formatHeaders(headers map[string]string) string {
+	// Sort Header keys
+	var sb strings.Builder
+
+	keys := make([]string, len(headers))
+	i := 0
+	for k := range headers {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys)
+
+	sb.WriteString("{")
+
+	for k := range keys {
+		log.Printf("header %s %s\n", keys[k], headers[keys[k]])
+		if k != 0 {
+			sb.WriteString(",")
+		}
+		sb.WriteString(keys[k])
+		sb.WriteString("=\"")
+		sb.WriteString(headers[keys[k]])
+		sb.WriteString("\"")
+	}
+
+	sb.WriteString("}")
+	return sb.String()
+}
+
+func (p *prometheusExporter) export(list []metrics) error {
 	var err error
 
-	for k, v := range m.headers {
-		log.Printf("header %s %s\n", k, v)
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	var numberOfMetrics int
+	for _, m := range list {
+		numberOfMetrics += len(m.values)
 	}
 
-	for k, v := range m.values {
-		log.Printf("value %s %f\n", k, v)
+	formattedMetrics = make([]string, numberOfMetrics)
+
+	var metricIndex int
+	for _, m := range list {
+		formattedHeaders := formatHeaders(m.headers)
+
+		for k, v := range m.values {
+			formattedMetrics[metricIndex] = fmt.Sprintf("%s%s %f", k, formattedHeaders, v)
+			log.Printf("metric %s\n", formattedMetrics[metricIndex])
+			metricIndex++
+		}
 	}
-	//_, err := strconv.ParseFloat(value, 64)
-	//if err == nil {
-	////switch ctype {
-	////case clock, power:
-	////collectors[ctype].With(prometheus.Labels{"gpu": gpu, "name": name}).Set(fValue)
-	////default:
-	////collectors[ctype].With(prometheus.Labels{"gpu": gpu}).Set(fValue)
-	////}
-	//}
 	return err
 }
