@@ -7,20 +7,18 @@ import (
 	"log"
 	"net"
 	"time"
-
-	"../config"
 )
 
 const programName = "bfx"
 
 var (
-	cfg    *config.Config
+	cfg    *config
 	export *prometheusExporter
 )
 
 func init() {
-	cfg = config.NewConfig(programName)
-	export = newPrometheusExporter(cfg.Prometheus.Address())
+	cfg = newConfig(programName)
+	export = newPrometheusExporter(cfg.prometheus.address())
 
 }
 
@@ -30,7 +28,7 @@ type rpcCommand struct {
 }
 
 func sendCommand(command string) (net.Conn, error) {
-	conn, err := net.Dial("tcp", cfg.Miner.Address())
+	conn, err := net.Dial("tcp", cfg.miner.address())
 	if err == nil {
 		var msg []byte
 		msg, err := json.Marshal(rpcCommand{Command: command})
@@ -51,7 +49,7 @@ func gatherCommand(command string) {
 		log.Printf("-------------------------------------\n")
 		r := newResponse(command, resp)
 
-		for _, metrics := range r.getMetrics(programName, programName, cfg.Miner.ID()) {
+		for _, metrics := range r.getMetrics(programName, programName, cfg.miner.id()) {
 			export.export(metrics)
 		}
 
@@ -83,7 +81,7 @@ func main() {
 	go func() {
 		for {
 			gather()
-			time.Sleep(time.Second * cfg.QueryDelay())
+			time.Sleep(time.Second * cfg.queryDelay())
 		}
 	}()
 	export.setup()
