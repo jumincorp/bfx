@@ -15,18 +15,8 @@ var (
 )
 
 type prometheusExporter struct {
-	address string
 	exporter
-}
-
-func init() {
-	//for _, c := range collectors {
-	//prometheus.MustRegister(c)
-	//}
-
-	// // Metrics have to be registered to be exposed:
-	//prometheus.MustRegister(minerGpuHashRate)
-
+	address string
 }
 
 func newPrometheusExporter(address string) *prometheusExporter {
@@ -35,7 +25,7 @@ func newPrometheusExporter(address string) *prometheusExporter {
 	return p
 }
 
-func handleWithCare() http.HandlerFunc {
+func httpHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		mutex.Lock()
 		defer mutex.Unlock()
@@ -48,10 +38,7 @@ func handleWithCare() http.HandlerFunc {
 }
 
 func (p *prometheusExporter) setup() {
-	// The Handler function provides a default handler to expose metrics
-	// via an HTTP server. "/metrics" is the usual endpoint for that.
-	//http.Handle("/metrics", promhttp.Handler())
-	http.Handle("/metrics", handleWithCare())
+	http.Handle("/metrics", httpHandler())
 	log.Fatal(http.ListenAndServe(p.address, nil))
 }
 
@@ -70,7 +57,6 @@ func formatHeaders(headers map[string]string) string {
 	sb.WriteString("{")
 
 	for k := range keys {
-		//log.Printf("header %s %s\n", keys[k], headers[keys[k]])
 		if k != 0 {
 			sb.WriteString(",")
 		}
@@ -103,7 +89,6 @@ func (p *prometheusExporter) export(list []metrics) error {
 
 		for k, v := range m.values {
 			formattedMetrics[metricIndex] = fmt.Sprintf("%s%s %f", k, formattedHeaders, v)
-			//log.Printf("metric %s\n", formattedMetrics[metricIndex])
 			metricIndex++
 		}
 	}

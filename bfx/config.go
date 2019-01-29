@@ -20,7 +20,7 @@ func newConfig(name string) *config {
 	cfg := new(config)
 
 	viper.SetConfigName(name)
-	viper.AddConfigPath(fmt.Sprintf("/etc/%v", name))
+	viper.AddConfigPath(fmt.Sprintf("/etc/"))
 
 	cfg.prometheus = newPrometheusConfig()
 	cfg.miner = newMinerConfig()
