@@ -70,7 +70,7 @@ func formatHeaders(headers map[string]string) string {
 	sb.WriteString("{")
 
 	for k := range keys {
-		log.Printf("header %s %s\n", keys[k], headers[keys[k]])
+		//log.Printf("header %s %s\n", keys[k], headers[keys[k]])
 		if k != 0 {
 			sb.WriteString(",")
 		}
@@ -103,7 +103,7 @@ func (p *prometheusExporter) export(list []metrics) error {
 
 		for k, v := range m.values {
 			formattedMetrics[metricIndex] = fmt.Sprintf("%s%s %f", k, formattedHeaders, v)
-			log.Printf("metric %s\n", formattedMetrics[metricIndex])
+			//log.Printf("metric %s\n", formattedMetrics[metricIndex])
 			metricIndex++
 		}
 	}

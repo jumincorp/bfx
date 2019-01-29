@@ -43,7 +43,7 @@ func sendCommand(command string) (net.Conn, error) {
 	return conn, err
 }
 
-func gatherCommand(command string) {
+func gatherCommand(metricsList *[]metrics, command string) {
 	conn, err := sendCommand(command)
 	if err == nil {
 
@@ -53,8 +53,7 @@ func gatherCommand(command string) {
 		log.Printf("-------------------------------------\n")
 		r := newResponse(command, resp)
 
-		metrics := r.getMetrics(programName, programName, cfg.miner.id())
-		export.export(metrics)
+		r.getMetrics(metricsList, programName, programName, cfg.miner.id())
 
 	} else {
 		log.Printf("Error sending command to miner: %v\n", err)
@@ -62,7 +61,21 @@ func gatherCommand(command string) {
 }
 
 func gather() {
-	gatherCommand("devs")
+	var metricsList = make([]metrics, 0)
+
+	gatherCommand(&metricsList, "devs")
+	gatherCommand(&metricsList, "devdetails")
+	gatherCommand(&metricsList, "summary")
+	gatherCommand(&metricsList, "pools")
+	gatherCommand(&metricsList, "stats")
+	gatherCommand(&metricsList, "coin")
+	gatherCommand(&metricsList, "procs")
+	gatherCommand(&metricsList, "notify")
+
+	//gatherCommand(&metricsList, "version")
+	//gatherCommand(&metricsList, "config")
+
+	export.export(metricsList)
 }
 
 func main() {
