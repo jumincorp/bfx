@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -42,55 +42,47 @@ func (p *prometheusExporter) setup() {
 	log.Fatal(http.ListenAndServe(p.address, nil))
 }
 
-func formatHeaders(headers map[string]string) string {
-	// Sort Header keys
+func formatMetric(m metric) string {
 	var sb strings.Builder
 
-	keys := make([]string, len(headers))
+	sb.WriteString(m.name)
+
+	sortedLabels := make([]string, len(m.labels))
 	i := 0
-	for k := range headers {
-		keys[i] = k
+	for k := range m.labels {
+		sortedLabels[i] = k
 		i++
 	}
-	sort.Strings(keys)
+	sort.Strings(sortedLabels)
 
-	sb.WriteString("{")
-
-	for k := range keys {
-		if k != 0 {
-			sb.WriteString(",")
+	sb.WriteRune('{')
+	for i := range sortedLabels {
+		if i != 0 {
+			sb.WriteRune(',')
 		}
-		sb.WriteString(keys[k])
+		sb.WriteString(sortedLabels[i])
 		sb.WriteString("=\"")
-		sb.WriteString(headers[keys[k]])
-		sb.WriteString("\"")
+		sb.WriteString(m.labels[sortedLabels[i]])
+		sb.WriteRune('"')
 	}
+	sb.WriteString("} ")
 
-	sb.WriteString("}")
+	sb.WriteString(strconv.FormatFloat(m.value, 'f', -1, 64))
+
 	return sb.String()
 }
 
-func (p *prometheusExporter) export(list []metrics) error {
+func (p *prometheusExporter) export(metrics []metric) error {
 	var err error
 
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	var numberOfMetrics int
-	for _, m := range list {
-		numberOfMetrics += len(m.values)
-	}
+	formattedMetrics = make([]string, len(metrics))
 
-	formattedMetrics = make([]string, numberOfMetrics)
-
-	var metricIndex int
-	for _, m := range list {
-		formattedHeaders := formatHeaders(m.headers)
-
-		for k, v := range m.values {
-			formattedMetrics[metricIndex] = fmt.Sprintf("%s%s %f", k, formattedHeaders, v)
-			metricIndex++
-		}
+	for i, m := range metrics {
+		//formattedLabels := formatLabels(m.labels)
+		formattedMetrics[i] = formatMetric(m)
 	}
 	return err
 }

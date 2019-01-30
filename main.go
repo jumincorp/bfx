@@ -21,9 +21,10 @@ func init() {
 	export = newPrometheusExporter(cfg.prometheus.address())
 }
 
-type metrics struct {
-	headers map[string]string
-	values  map[string]float64
+type metric struct {
+	labels map[string]string
+	name   string
+	value  float64
 }
 
 type rpcCommand struct {
@@ -43,7 +44,7 @@ func sendCommand(command string) (net.Conn, error) {
 	return conn, err
 }
 
-func gatherCommand(metricsList *[]metrics, command string) {
+func gatherCommand(metricsList *[]metric, command string) {
 	conn, err := sendCommand(command)
 	if err == nil {
 
@@ -61,7 +62,7 @@ func gatherCommand(metricsList *[]metrics, command string) {
 }
 
 func gather() {
-	var metricsList = make([]metrics, 0)
+	var metricsList = make([]metric, 0)
 
 	gatherCommand(&metricsList, "devs")
 	gatherCommand(&metricsList, "devdetails")

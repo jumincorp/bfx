@@ -10,14 +10,14 @@ import (
 
 type responseIface interface {
 	append(map[string]interface{})
-	getMetrics(metricsList *[]metrics, prefix string, namespace string, id string)
+	getMetrics(metricsList *[]metric, prefix string, namespace string, id string)
 	setCommandName(string)
 }
 
 type response struct {
-	command     string
-	data        []map[string]interface{}
-	headerNames map[string]string
+	command  string
+	data     []map[string]interface{}
+	labelFmt map[string]string
 }
 
 func (r *response) setCommandName(command string) {
@@ -47,12 +47,9 @@ func newResponse(command string, responseBytes []byte) responseIface {
 	if err != nil {
 		panic(err)
 	}
-	//fmt.Printf("JSON0: %v\n\n", data)
 
 	delete(responseData, "STATUS")
 	delete(responseData, "id")
-
-	log.Printf("JSON: %v\n\n", responseData)
 
 	// By now we should have only one element
 	if len(responseData) != 1 {
@@ -89,7 +86,6 @@ func newResponse(command string, responseBytes []byte) responseIface {
 	for _, wrapped := range responseData {
 		respList = wrapped.([]interface{})
 	}
-	//log.Printf("respList: %v\n\n", respList)
 
 	for _, respElement := range respList {
 		r.append(respElement.(map[string]interface{}))
@@ -98,43 +94,44 @@ func newResponse(command string, responseBytes []byte) responseIface {
 	return r
 }
 
-func (r *response) getMetrics(metricsList *[]metrics, prefix string, namespace string, id string) {
+func (r *response) getMetrics(metricsList *[]metric, prefix string, namespace string, id string) {
 
 	for _, element := range r.data {
-		var metrics metrics
-		metrics.headers = make(map[string]string)
-		metrics.headers["namespace"] = namespace
-		metrics.headers["miner"] = id
-
-		metrics.values = make(map[string]float64)
-
 		log.Printf("---")
-		for name, val := range element {
+		var m metric
 
-			if format, present := r.headerNames[name]; present {
-				//log.Printf("header %s : %s\n", name, fmt.Sprintf(format, val))
-				metrics.headers[sanitizeName(name)] = fmt.Sprintf(format, val)
-			} else {
-				metricName := r.metricName(prefix, name)
+		m.labels = make(map[string]string)
+		m.labels["namespace"] = namespace
+		m.labels["miner"] = id
+
+		for name, val := range element {
+			if format, isLabel := r.labelFmt[name]; isLabel {
+				m.labels[sanitizeName(name)] = fmt.Sprintf(format, val)
+			}
+		}
+
+		for name, val := range element {
+			if _, isLabel := r.labelFmt[name]; !isLabel {
+				m.name = r.metricName(prefix, name)
 				switch casted := val.(type) {
 				case int64:
 					log.Printf("i! %s %d\n", name, casted)
 				case float64:
 					//log.Printf("f  %s >> %s %f\n", name, metricName, casted)
-					metrics.values[metricName] = casted
+					m.value = casted
 				case string:
 					log.Printf("s! %s %s\n", name, casted)
 				default:
 					log.Printf("?! %s %s\n", name, casted)
 				}
+				*metricsList = append(*(metricsList), m)
 			}
 		}
-		*metricsList = append(*(metricsList), metrics)
 	}
 }
 
 func (r *response) makeResponse() {
-	r.headerNames = make(map[string]string)
+	r.labelFmt = make(map[string]string)
 }
 
 type defaultResponse struct {
@@ -156,12 +153,12 @@ func newDevdetailsResponse() *devdetailsResponse {
 	r := new(devdetailsResponse)
 	r.makeResponse()
 
-	r.headerNames["Name"] = "%s"
-	r.headerNames["ID"] = "%.0f"
-	r.headerNames["DEVDETAILS"] = "%.0f"
-	r.headerNames["Model"] = "%s"
-	r.headerNames["Kernel"] = "%s"
-	r.headerNames["Driver"] = "%s"
+	r.labelFmt["Name"] = "%s"
+	r.labelFmt["ID"] = "%.0f"
+	r.labelFmt["DEVDETAILS"] = "%.0f"
+	r.labelFmt["Model"] = "%s"
+	r.labelFmt["Kernel"] = "%s"
+	r.labelFmt["Driver"] = "%s"
 
 	return r
 }
@@ -174,8 +171,8 @@ func newDevsResponse() *devsResponse {
 	r := new(devsResponse)
 	r.makeResponse()
 
-	r.headerNames["Name"] = "%s"
-	r.headerNames["ID"] = "%.0f"
+	r.labelFmt["Name"] = "%s"
+	r.labelFmt["ID"] = "%.0f"
 
 	return r
 }
@@ -188,8 +185,8 @@ func newStatsResponse() *statsResponse {
 	r := new(statsResponse)
 	r.makeResponse()
 
-	r.headerNames["STATS"] = "%.0f"
-	r.headerNames["ID"] = "%s"
+	r.labelFmt["STATS"] = "%.0f"
+	r.labelFmt["ID"] = "%s"
 
 	return r
 }
@@ -202,8 +199,8 @@ func newPoolsResponse() *poolsResponse {
 	r := new(poolsResponse)
 	r.makeResponse()
 
-	r.headerNames["POOL"] = "%.0f"
-	r.headerNames["URL"] = "%s"
+	r.labelFmt["POOL"] = "%.0f"
+	r.labelFmt["URL"] = "%s"
 
 	return r
 }
@@ -216,7 +213,7 @@ func newCoinResponse() *coinResponse {
 	r := new(coinResponse)
 	r.makeResponse()
 
-	r.headerNames["Hash Method"] = "%s"
+	r.labelFmt["Hash Method"] = "%s"
 
 	return r
 }
@@ -229,9 +226,9 @@ func newNotifyResponse() *notifyResponse {
 	r := new(notifyResponse)
 	r.makeResponse()
 
-	r.headerNames["Name"] = "%s"
-	r.headerNames["ID"] = "%.0f"
-	r.headerNames["NOTIFY"] = "%.0f"
+	r.labelFmt["Name"] = "%s"
+	r.labelFmt["ID"] = "%.0f"
+	r.labelFmt["NOTIFY"] = "%.0f"
 
 	return r
 }
@@ -244,9 +241,9 @@ func newProcsResponse() *procsResponse {
 	r := new(procsResponse)
 	r.makeResponse()
 
-	r.headerNames["Name"] = "%s"
-	r.headerNames["ID"] = "%.0f"
-	r.headerNames["PGA"] = "%.0f"
+	r.labelFmt["Name"] = "%s"
+	r.labelFmt["ID"] = "%.0f"
+	r.labelFmt["PGA"] = "%.0f"
 
 	return r
 }
