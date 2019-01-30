@@ -9,16 +9,9 @@ import (
 	"time"
 )
 
-const programName = "bfx"
-
 var (
 	export interface{}
 )
-
-func init() {
-	readConfig(programName)
-	export = newPrometheusExporter(prometheus())
-}
 
 type metric struct {
 	labels map[string]string
@@ -78,7 +71,9 @@ func gather() {
 	export.(exporter).export(metricsList)
 }
 
-func main() {
+func run(args []string) {
+	export = newPrometheusExporter(prometheus())
+
 	go func() {
 		for {
 			gather()
