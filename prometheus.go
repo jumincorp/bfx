@@ -32,7 +32,6 @@ func httpHandler() http.HandlerFunc {
 
 		for _, metric := range formattedMetrics {
 			w.Write([]byte(metric))
-			w.Write([]byte("\n"))
 		}
 	}
 }
@@ -68,6 +67,8 @@ func formatMetric(m metric) string {
 	sb.WriteString("} ")
 
 	sb.WriteString(strconv.FormatFloat(m.value, 'f', -1, 64))
+
+	sb.WriteRune('\n')
 
 	return sb.String()
 }

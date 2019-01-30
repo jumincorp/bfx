@@ -14,3 +14,4 @@ bfx
 
 # Spurious configuration files
 *.json
+*.yaml

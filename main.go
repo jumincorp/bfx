@@ -12,13 +12,12 @@ import (
 const programName = "bfx"
 
 var (
-	cfg    *config
-	export *prometheusExporter
+	export interface{}
 )
 
 func init() {
-	cfg = newConfig(programName)
-	export = newPrometheusExporter(cfg.prometheus.address())
+	readConfig(programName)
+	export = newPrometheusExporter(prometheus())
 }
 
 type metric struct {
@@ -33,7 +32,7 @@ type rpcCommand struct {
 }
 
 func sendCommand(command string) (net.Conn, error) {
-	conn, err := net.Dial("tcp", cfg.miner.address())
+	conn, err := net.Dial("tcp", miner())
 	if err == nil {
 		var msg []byte
 		msg, err := json.Marshal(rpcCommand{Command: command})
@@ -54,7 +53,7 @@ func gatherCommand(metricsList *[]metric, command string) {
 		log.Printf("-------------------------------------\n")
 		r := newResponse(command, resp)
 
-		r.getMetrics(metricsList, programName, programName, cfg.miner.id())
+		r.getMetrics(metricsList, programName, programName, id())
 
 	} else {
 		log.Printf("Error sending command to miner: %v\n", err)
@@ -76,15 +75,15 @@ func gather() {
 	//gatherCommand(&metricsList, "version")
 	//gatherCommand(&metricsList, "config")
 
-	export.export(metricsList)
+	export.(exporter).export(metricsList)
 }
 
 func main() {
 	go func() {
 		for {
 			gather()
-			time.Sleep(time.Second * cfg.queryDelay())
+			time.Sleep(time.Second * queryDelay())
 		}
 	}()
-	export.setup()
+	export.(exporter).setup()
 }

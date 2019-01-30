@@ -2,84 +2,60 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/spf13/viper"
 )
 
 const (
-	cfgQueryDelay = "QueryDelay"
+	cfgQueryDelay = "time"
+	cfgID         = "id"
+	cfgPrometheus = "prometheus"
+	cfgMiner      = "miner"
 )
 
-type config struct {
-	miner      *minerConfig
-	prometheus *prometheusConfig
-}
-
-func newConfig(name string) *config {
-	cfg := new(config)
+func readConfig(name string) {
+	//cfg := new(config)
 
 	viper.SetConfigName(name)
-	viper.AddConfigPath(fmt.Sprintf("/etc/"))
+	//viper.AddConfigPath(fmt.Sprintf("/etc/"))
+	viper.AddConfigPath(fmt.Sprintf("."))
 
-	cfg.prometheus = newPrometheusConfig()
-	cfg.miner = newMinerConfig()
+	viper.SetEnvPrefix(name)
+	viper.AutomaticEnv()
 
+	viper.SetDefault(cfgID, "default")
+	viper.SetDefault(cfgMiner, ":4028")
+	viper.SetDefault(cfgPrometheus, ":40010")
 	viper.SetDefault(cfgQueryDelay, 15)
 
 	err := viper.ReadInConfig()
 	if err != nil { // Handle errors reading the config file
 		fmt.Printf("error reading config file: %s", err)
 	}
-	return cfg
+
+	log.Printf("cfg id %v\n", id())
+	log.Printf("cfg miner %v\n", miner())
+	log.Printf("cfg prometheus %v\n", prometheus())
+	log.Printf("cfg time %v\n", queryDelay())
 }
 
-// QueryDelay returns the time we wait to interrogate the miner again
-func (cfg *config) queryDelay() time.Duration {
-	return time.Duration(viper.Get(cfgQueryDelay).(int))
+func queryDelay() time.Duration {
+	if delay, ok := viper.Get(cfgQueryDelay).(int); ok {
+		return time.Duration(time.Duration(delay) * time.Second)
+	}
+	return viper.GetDuration(cfgQueryDelay)
 }
 
-const (
-	cfgMinerAddress = "Miner.Address"
-	cfgMinerID      = "Miner.Id"
-)
-
-// Miner represents the Miner section of the configuration
-type minerConfig struct {
+func miner() string {
+	return viper.GetString(cfgMiner)
 }
 
-func newMinerConfig() *minerConfig {
-	minerConfig := new(minerConfig)
-
-	viper.SetDefault(cfgMinerAddress, ":4028")
-	viper.SetDefault(cfgMinerID, "default")
-
-	return minerConfig
+func id() string {
+	return viper.GetString(cfgID)
 }
 
-func (*minerConfig) address() string {
-	return viper.Get(cfgMinerAddress).(string)
-}
-
-func (*minerConfig) id() string {
-	return viper.Get(cfgMinerID).(string)
-}
-
-const (
-	cfgPrometheusAddress = "Prometheus.Address"
-)
-
-// Prometheus represents the Prometheus section of the configuration
-type prometheusConfig struct {
-}
-
-func newPrometheusConfig() *prometheusConfig {
-	prometheusConfig := new(prometheusConfig)
-	viper.SetDefault(cfgPrometheusAddress, ":40010")
-
-	return prometheusConfig
-}
-
-func (*prometheusConfig) address() string {
-	return viper.Get(cfgPrometheusAddress).(string)
+func prometheus() string {
+	return viper.GetString(cfgPrometheus)
 }
