@@ -77,7 +77,7 @@ func run(args []string) {
 	go func() {
 		for {
 			gather()
-			time.Sleep(time.Second * queryDelay())
+			time.Sleep(queryDelay())
 		}
 	}()
 	export.(exporter).setup()
