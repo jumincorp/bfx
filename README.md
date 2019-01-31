@@ -25,3 +25,6 @@ export BFX_PROMETHEUS=":50020"
 export BFX_TIME="5"
 bfx
 ```
+
+## Sample Output
+[Sample Output](wiki/Sample-output) from a 4-GPU system
