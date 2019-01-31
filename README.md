@@ -2,6 +2,14 @@
 
 bfx exports bfgminer metrics to Prometheus.
 
+## Building
+
+If you have Go installed:
+`go get github.com/JUMINCORP/bfx` should get the application to your $GOBIN directory.
+
+
+## Usage
+
 Sample usage: 
 
 `bfx --label test_data --miner localhost:4028 --prometheus :50020 --time 5`
@@ -15,5 +23,5 @@ export BFX_LABEL="test_data"
 export BFX_MINER="localhost:4028"
 export BFX_PROMETHEUS=":50020"
 export BFX_TIME="5"
-./bfx
+bfx
 ```
