@@ -27,4 +27,4 @@ bfx
 ```
 
 ## Sample Output
-[Sample Output](wiki/Sample-output) from a 4-GPU system
+[Sample Output](https://github.com/JUMINCORP/bfx/wiki/Sample-output) from a 4-GPU system
