@@ -1,4 +1,5 @@
 # bfx
+https://travis-ci.org/JUMINCORP/bfx.svg?branch=master
 
 bfx exports bfgminer metrics to Prometheus.
 
