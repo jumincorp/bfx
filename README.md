@@ -1,5 +1,5 @@
 # bfx
-[![Build Status](https://travis-ci.org/JUMINCORP/bfx.svg?branch=master)](https://travis-ci.org/JUMINCORP/bfx)
+[![Build Status](https://travis-ci.org/jumincorp/bfx.svg?branch=master)](https://travis-ci.org/JUMINCORP/bfx)
 
 bfx exports bfgminer metrics to Prometheus.
 
