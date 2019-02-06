@@ -1,4 +1,7 @@
 language: go
 go:
-        - "1.10"
+- '1.10'
 script: go build
+notifications:
+  slack:
+    secure: PTLW4K6j2/ThJOfHfm7itRY3BkpcM11FbiqVtzPOh9k2dpmt3oIyt9tmaxTekLJrmtF3sd6JgWuB+1KJeuZXr6rLG5LPLCyN6Zi9nAGWC1U8jFP3zLMoN0IhFU6m3+l/HH9vk/qO29DhiFrderhgyw6oDmtyCJnRXlJM9bri7W5lnYuTEwEyPGFAkyvql6X41gM44Bzrz84FhdnrzwxDVPUgv72Nfgz+nb/1q9eN5l3ssZLXs9OfxgiSaaUBZwDNUljnWRyp3DcIiAtt3JiDrpHSt1ehMbGilQyCbyX8viheIbtWYizE/cBcXSHQ5gqCAuRr6vX/v0CnhaWCxvpsNiEGeYwnCTdHl//qLuQkglWZbY4VDMT/YMvLqTxXr5GnOteZ13U/5RUuP5PZWigLkTWPS37e1s5kLNPMet0OOHai/Rwg84ZnfjWLSavH663stXOSJU4ZUuk+ypF4w+3P0e91CE5Wdl+wOBaAHB7qkZd4c7Nptbsw8LAO8DojOQFAO/q0v3R21FsOFkGqFVI93qv7wcj+02vfBMQLean+Zg4t3+0/tJhJcQvE38FwQxtoSL7lxUtLgA+2tqy9wjNjQU494Sru3v87LXfxzr2f3zXTJV1b0d3nfePUu3JFCQ54xtnaQwJCON+Q51HuNlH73qW1Ic16Z8te62niKsMC/5k=
