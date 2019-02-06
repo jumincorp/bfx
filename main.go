@@ -7,16 +7,30 @@ import (
 	"log"
 	"net"
 	"time"
+
+	"github.com/jumincorp/constrictor"
+	"github.com/jumincorp/micrometrics"
+)
+
+const (
+	programName = "bfx"
 )
 
 var (
-	export interface{}
+	label             = constrictor.StringVar("label", "l", "default", "Label to identify this miner's data")
+	miner             = constrictor.AddressPortVar("miner", "m", ":4028", "Address:Port of the miner's RPC port")
+	prometheusAddress = constrictor.AddressPortVar("prometheus", "p", ":40010", "Address:Port to expose to Prometheus")
+	queryDelay        = constrictor.TimeDurationVar("time", "t", "30", "Delay between RPC calls to the miner")
+
+	exporter micrometrics.Exporter
 )
 
-type metric struct {
-	labels map[string]string
-	name   string
-	value  float64
+func init() {
+	constrictor.App("bfx", "bfgminer metrics", "Export bfgminer metrics")
+
+	log.Printf("miner %s prometheus %s\n", miner(), prometheusAddress())
+
+	exporter = micrometrics.NewPrometheusExporter(prometheusAddress())
 }
 
 type rpcCommand struct {
@@ -36,7 +50,7 @@ func sendCommand(command string) (net.Conn, error) {
 	return conn, err
 }
 
-func gatherCommand(metricsList *[]metric, command string) {
+func gatherCommand(metricsList *[]micrometrics.Metric, command string) {
 	conn, err := sendCommand(command)
 	if err == nil {
 
@@ -46,7 +60,7 @@ func gatherCommand(metricsList *[]metric, command string) {
 		log.Printf("-------------------------------------\n")
 		r := newResponse(command, resp)
 
-		r.getMetrics(metricsList, programName, programName, id())
+		r.getMetrics(metricsList, programName, programName, label())
 
 	} else {
 		log.Printf("Error sending command to miner: %v\n", err)
@@ -54,7 +68,7 @@ func gatherCommand(metricsList *[]metric, command string) {
 }
 
 func gather() {
-	var metricsList = make([]metric, 0)
+	var metricsList = make([]micrometrics.Metric, 0)
 
 	gatherCommand(&metricsList, "devs")
 	gatherCommand(&metricsList, "devdetails")
@@ -68,17 +82,15 @@ func gather() {
 	//gatherCommand(&metricsList, "version")
 	//gatherCommand(&metricsList, "config")
 
-	export.(exporter).export(metricsList)
+	exporter.Export(metricsList)
 }
 
-func run(args []string) {
-	export = newPrometheusExporter(prometheus())
-
+func main() {
 	go func() {
 		for {
 			gather()
 			time.Sleep(queryDelay())
 		}
 	}()
-	export.(exporter).setup()
+	exporter.Setup()
 }

@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"log"
 	"strings"
+
+	"github.com/jumincorp/micrometrics"
 )
 
 type responseIface interface {
 	append(map[string]interface{})
-	getMetrics(metricsList *[]metric, prefix string, namespace string, id string)
+	getMetrics(metricsList *[]micrometrics.Metric, prefix string, namespace string, id string)
 	setCommandName(string)
 }
 
@@ -94,31 +96,31 @@ func newResponse(command string, responseBytes []byte) responseIface {
 	return r
 }
 
-func (r *response) getMetrics(metricsList *[]metric, prefix string, namespace string, id string) {
+func (r *response) getMetrics(metricsList *[]micrometrics.Metric, prefix string, namespace string, id string) {
 
 	for _, element := range r.data {
 		log.Printf("---")
-		var m metric
+		var m micrometrics.Metric
 
-		m.labels = make(map[string]string)
-		m.labels["namespace"] = namespace
-		m.labels["miner"] = id
+		m.Labels = make(map[string]string)
+		m.Labels["namespace"] = namespace
+		m.Labels["miner"] = id
 
 		for name, val := range element {
 			if format, isLabel := r.labelFmt[name]; isLabel {
-				m.labels[sanitizeName(name)] = fmt.Sprintf(format, val)
+				m.Labels[sanitizeName(name)] = fmt.Sprintf(format, val)
 			}
 		}
 
 		for name, val := range element {
 			if _, isLabel := r.labelFmt[name]; !isLabel {
-				m.name = r.metricName(prefix, name)
+				m.Name = r.metricName(prefix, name)
 				switch casted := val.(type) {
 				case int64:
 					log.Printf("i! %s %d\n", name, casted)
 				case float64:
 					//log.Printf("f  %s >> %s %f\n", name, metricName, casted)
-					m.value = casted
+					m.Value = casted
 				case string:
 					log.Printf("s! %s %s\n", name, casted)
 				default:
