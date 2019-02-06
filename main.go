@@ -20,7 +20,7 @@ var (
 	label             = constrictor.StringVar("label", "l", "default", "Label to identify this miner's data")
 	miner             = constrictor.AddressPortVar("miner", "m", ":4028", "Address:Port of the miner's RPC port")
 	prometheusAddress = constrictor.AddressPortVar("prometheus", "p", ":40010", "Address:Port to expose to Prometheus")
-	queryDelay        = constrictor.TimeDurationVar("time", "t", "30", "Delay between RPC calls to the miner")
+	queryDelay        = constrictor.TimeDurationVar("time", "t", "30s", "Delay between RPC calls to the miner")
 
 	exporter micrometrics.Exporter
 )
@@ -28,7 +28,7 @@ var (
 func init() {
 	constrictor.App("bfx", "bfgminer metrics", "Export bfgminer metrics")
 
-	log.Printf("miner %s prometheus %s\n", miner(), prometheusAddress())
+	log.Printf("miner %s prometheus %s queryDelay %s\n", miner(), prometheusAddress(), queryDelay())
 
 	exporter = micrometrics.NewPrometheusExporter(prometheusAddress())
 }
