@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/jumincorp/constrictor"
-	"github.com/jumincorp/micrometrics"
+	"github.com/jumincorp/micrometric"
 )
 
 const (
@@ -22,16 +22,10 @@ var (
 	prometheusAddress = constrictor.AddressPortVar("prometheus", "p", ":40010", "Address:Port to expose to Prometheus")
 	queryDelay        = constrictor.TimeDurationVar("time", "t", "30", "Delay between RPC calls to the miner")
 
-	exporter micrometrics.Exporter
+	app = constrictor.NewApp("bfx", "bfgminer metrics", "Export bfgminer metrics", run)
+
+	exporter micrometric.Exporter
 )
-
-func init() {
-	constrictor.App("bfx", "bfgminer metrics", "Export bfgminer metrics")
-
-	log.Printf("miner %s prometheus %s\n", miner(), prometheusAddress())
-
-	exporter = micrometrics.NewPrometheusExporter(prometheusAddress())
-}
 
 type rpcCommand struct {
 	Command   string `json:"command"`
@@ -50,7 +44,7 @@ func sendCommand(command string) (net.Conn, error) {
 	return conn, err
 }
 
-func gatherCommand(metricsList *[]micrometrics.Metric, command string) {
+func gatherCommand(metricsList *[]micrometric.Metric, command string) {
 	conn, err := sendCommand(command)
 	if err == nil {
 
@@ -68,7 +62,7 @@ func gatherCommand(metricsList *[]micrometrics.Metric, command string) {
 }
 
 func gather() {
-	var metricsList = make([]micrometrics.Metric, 0)
+	var metricsList = make([]micrometric.Metric, 0)
 
 	gatherCommand(&metricsList, "devs")
 	gatherCommand(&metricsList, "devdetails")
@@ -85,12 +79,18 @@ func gather() {
 	exporter.Export(metricsList)
 }
 
-func main() {
+func run([]string) error {
+	log.Printf("miner %s prometheus %s\n", miner(), prometheusAddress())
+	exporter = micrometric.NewPrometheusExporter(prometheusAddress())
 	go func() {
 		for {
 			gather()
 			time.Sleep(queryDelay())
 		}
 	}()
-	exporter.Setup()
+	return exporter.Serve()
+}
+
+func main() {
+	app.Execute()
 }

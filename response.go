@@ -7,12 +7,12 @@ import (
 	"log"
 	"strings"
 
-	"github.com/jumincorp/micrometrics"
+	"github.com/jumincorp/micrometric"
 )
 
 type responseIface interface {
 	append(map[string]interface{})
-	getMetrics(metricsList *[]micrometrics.Metric, prefix string, namespace string, id string)
+	getMetrics(metricsList *[]micrometric.Metric, prefix string, namespace string, id string)
 	setCommandName(string)
 }
 
@@ -96,11 +96,11 @@ func newResponse(command string, responseBytes []byte) responseIface {
 	return r
 }
 
-func (r *response) getMetrics(metricsList *[]micrometrics.Metric, prefix string, namespace string, id string) {
+func (r *response) getMetrics(metricsList *[]micrometric.Metric, prefix string, namespace string, id string) {
 
 	for _, element := range r.data {
 		log.Printf("---")
-		var m micrometrics.Metric
+		var m micrometric.Metric
 
 		m.Labels = make(map[string]string)
 		m.Labels["namespace"] = namespace
